@@ -1,0 +1,57 @@
+/**
+ * Simple test.
+ *
+ * @author Karol Bryd
+ */
+
+connection {
+//    host "http://localhost:8080/alfresco/service/cmis"
+    host "http://192.168.1.101:9080/cmis/resources"
+    login "dmadmin"
+    password "dmadmin"
+    repository-id "documentum"
+    extension-mode "documentum"
+    service-mode "rest"
+    stop-on-fail "false"
+}
+
+prevalidate {
+//    exists-folder "/Data Dictionary"
+//    exists-file "/Folder a"
+//    exists-object "/Folder a" "cm:content"
+    fail-when-type "not-exists" "dm_sysobject"
+    fail-when-user "exists" "Administrator"
+}
+
+prepare {
+//    create-folders "Folder a" "Folder b" baseType="cmis:folder" baseFolder="/Stamper"
+    create-folders "TestA" "TestB" baseFolder="/dmadmin"
+}
+
+execute {
+    import-files "/dmadmin/TestA" {
+        "/home/kbryd/sig1.png" "cmis:document" "image/png" "scanneda1.png" date=2005/11/05
+        "/home/kbryd/sig1.png" "cmis:document" "image/png" "scanneda2.png" date=2002/01/05
+    }
+
+// those will fail in Documentum
+//    add-aspect "/TestA/scanneda1.png" "P:cm:titled212"
+//    add-aspect "/TestA/scanneda2.png" "P:cm:titled"
+
+//    import-file "/home/kbryd/signature.png" "/TestA" "cmis:document" "image/png" "scanneda3.png" date=2005/11/05
+    
+//    add-aspect "/TestA/scanneda3.png" "P:cm:titled"
+//    add-aspect "/TestA/scanneda3.png" "P:cm:emailed"
+//    delete-file "/TestA/scanneda1.png" all-versions="true"
+
+//    update-properties "/TestA/scanneda3.png" cm_title="something else.png"
+//    update-properties "/TestA/scanneda3.png" cm_sentdate=2006/11/01 14:45:19
+
+   delete-file "/dmadmin/TestA/scanneda2.png"   
+   delete-file "/dmadmin/TestA/scanneda1.png"   
+    delete-folder "/dmadmin/TestA"
+}
+
+validate {
+}
+
