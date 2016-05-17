@@ -2,7 +2,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.metasys</groupId>
     <artifactId>cmis-in-batch</artifactId>
-    <version>1.0</version>
+    <version>1.1-SNAPSHOT</version>
     <name>cmis-in-batch</name>
     <url>http://blog.metasys.pl</url>
 
@@ -215,7 +215,7 @@
         <connection>scm:git:https://github.com/karolbe/cmis-in-batch.git</connection>
         <developerConnection>scm:git:git@github.com:karolbe/cmis-in-batch.git</developerConnection>
         <url>https://github.com/karolbe/cmis-in-batch</url>
-        <tag>cmis-in-batch-1.0</tag>
+        <tag>HEAD</tag>
     </scm>
 
     <distributionManagement>
