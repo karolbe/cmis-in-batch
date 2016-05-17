@@ -77,7 +77,7 @@ validate {
 
 Data generation is a useful feature that allows bulk importing of test data documents into CMIS compatible repository. Additionally it can populate metadata of document with values coming from predefined dictionaries. 
 
-Sample script for generating thousands of documents can look like this one:
+Sample script for generating thousands of documents can look like this one below.
 
 What it does is:
 
@@ -103,7 +103,7 @@ following combinations will be generated:
 * it will import each file in content-path location ("/media/kbryd/Media/work/sample_data/department") to a location in repository defined with linking-rule: /Repository/${discipline}/static/${doctype}/sub/${docsubtype} - each ${} variable will be replaced by a value coming from appropriate dictionary. 
 * naming-rule defines what the object name should be. It can use variables from the dictionaries plus a few additional: ${file_name},  ${file_size}, ${file_path}, ${file_ext}, ${file_mime}
 * mapping defines the mapping for populating metadata of each document, e.g. in this case *discipline* attribute will be populated with value of *discipline*.
-*
+
 ```
     generate-random-data "set1" {
         doc-type "cara_document"
@@ -138,7 +138,8 @@ following combinations will be generated:
 
 cmis-in-batch supports Documentum 6.7+ (obviously). There are some issues however due to the way how Documentum handles object names with the same names. Here is a snippet from Documentum 6.7 CMIS reference guide which describes the problem:
 
-```The Documentum CMIS implementation therefore exposes unique document path segments when
+```
+The Documentum CMIS implementation therefore exposes unique document path segments when
 requested using a combination of the object_name and r_object_id. This is done for every document,
 not just those that cannot be addressed by path. The path segments take this form:
 with name: 0900000b80001234_docname
