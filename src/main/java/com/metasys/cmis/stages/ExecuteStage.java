@@ -17,9 +17,12 @@
 package com.metasys.cmis.stages;
 
 import com.metasys.cmis.CMISConnector;
+import com.metasys.utils.RandomDataGenerator;
+import org.ikayzo.sdl.Tag;
+
 import java.io.File;
 import java.io.FileNotFoundException;
-import org.ikayzo.sdl.Tag;
+import java.io.IOException;
 
 /**
  *
@@ -40,6 +43,13 @@ public class ExecuteStage extends Stage {
         methodMappings.put("update-properties", "updateProperties");
         methodMappings.put("link-to-folder", "linkToFolder");
         methodMappings.put("unlink-from-folder", "unlinkFromFolder");
+
+        methodMappings.put("generate-random-data", "generateRandomData");
+    }
+
+    public void generateRandomData(Tag tag) throws IOException {
+        RandomDataGenerator randomDataGenerator = new RandomDataGenerator(tag);
+        randomDataGenerator.execute(this);
     }
 
     public void importFiles(Tag tag) throws FileNotFoundException {

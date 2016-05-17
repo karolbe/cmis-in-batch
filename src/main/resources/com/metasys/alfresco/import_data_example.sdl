@@ -1,0 +1,55 @@
+/**
+ * Simple test.
+ *
+ * @author Karol Bryd
+ */
+
+connection {
+    host "http://localhost:8080/emc-cmis/resources"
+    login "dmadmin"
+    password "dmadmin"
+    repository-id "devbox2"
+    extension-mode "documentum"
+    service-mode "rest"
+    stop-on-fail "false"
+}
+
+prevalidate {
+}
+
+prepare {
+    create-folders "Repository" baseType="cmis:folder" baseFolder="/"
+}
+
+execute {
+
+    generate-random-data "set1" {
+        doc-type "cara_document"
+        linking-rule "/Repository/${discipline}/static/${doctype}/sub/${docsubtype}"
+        naming-rule "${file_name} - ${doctype}"
+        content-path "/media/kbryd/Media/work/roche_work/Department"
+        max-objects 5
+        randomize-order true
+
+        mapping {
+            discipline {
+                "${discipline}"
+            }
+            doc_type {
+                "${doctype}"
+            }
+            doc_subtype {
+                "${docsubtype}"
+            }
+        }
+
+        dictionaries {
+            discipline "/tmp/disciplines"
+            doctype "/tmp/types"
+            docsubtype "/tmp/subtypes"
+        }
+    }
+}
+
+validate {
+}

@@ -16,22 +16,16 @@
  */
 package com.metasys.cmis.stages;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.lang.reflect.InvocationTargetException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
+import com.metasys.CMISInBatch;
+import com.metasys.cmis.CMISConnector;
+import com.metasys.utils.ExceptionParser;
+import com.metasys.utils.MessageFormatter;
 import org.alfresco.cmis.client.AlfrescoDocument;
-import org.apache.chemistry.opencmis.client.api.CmisObject;
-import org.apache.chemistry.opencmis.client.api.Document;
-import org.apache.chemistry.opencmis.client.api.Folder;
-import org.apache.chemistry.opencmis.client.api.ItemIterable;
-import org.apache.chemistry.opencmis.client.api.ObjectType;
+import org.apache.chemistry.opencmis.client.api.*;
 import org.apache.chemistry.opencmis.commons.PropertyIds;
 import org.apache.chemistry.opencmis.commons.data.ContentStream;
+import org.apache.chemistry.opencmis.commons.enums.BaseTypeId;
+import org.apache.chemistry.opencmis.commons.exceptions.CmisBaseException;
 import org.apache.chemistry.opencmis.commons.impl.dataobjects.ContentStreamImpl;
 import org.apache.commons.beanutils.MethodUtils;
 import org.apache.log4j.Logger;
@@ -40,15 +34,15 @@ import org.javatuples.Pair;
 import org.javatuples.Triplet;
 import org.javatuples.Unit;
 
-import com.metasys.CMISInBatch;
-import com.metasys.cmis.CMISConnector;
-import com.metasys.utils.ExceptionParser;
-import com.metasys.utils.MessageFormatter;
-import org.apache.chemistry.opencmis.commons.enums.BaseTypeId;
-import org.apache.chemistry.opencmis.commons.exceptions.CmisBaseException;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.lang.reflect.InvocationTargetException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
- *
  * @author karol.bryd@metasys.pl
  */
 public abstract class Stage {
@@ -66,10 +60,26 @@ public abstract class Stage {
     public boolean objectExists(String path) {
         try {
             return connector.getSession().getObjectByPath(convert2UniquePath(path)) != null;
-        } catch(Exception e) {
+        } catch (Exception e) {
             // ignore
         }
         return false;
+    }
+
+    public Folder createFolders(String path) throws CmisBaseException {
+        String _path[] = path.split("/");
+        String curpath = "/";
+        Folder last = null;
+        for (int n = 1; n < _path.length; n++) {
+            try {
+                last = createFolder(!curpath.equals("/") ? curpath.substring(0, curpath.length() - 1) : curpath, _path[n], "cmis:folder");
+            } catch (CmisBaseException o) {
+                //pass
+            }
+
+            curpath += _path[n] + "/";
+        }
+        return last;
     }
 
     public Folder createFolder(String path, String folderName) throws CmisBaseException {
@@ -89,7 +99,7 @@ public abstract class Stage {
         }
 
         if (objectExists(tmp)) {
-            String message = MessageFormatter.formatMessage("folderExists", new Pair<String, String>(folderName, path));
+            String message = MessageFormatter.formatMessage("folderExists", new Pair<>(folderName, path));
             logger.error(message);
             throw new OperationFailedException(message);
         }
@@ -108,7 +118,7 @@ public abstract class Stage {
         if (logger.isDebugEnabled()) {
             logger.debug("Created folder " + folder.getId());
         }
-        System.out.println(MessageFormatter.formatMessage("createFolder", new Triplet<String, String, String>(folderName, objectTypeId, path)));
+        logger.info(MessageFormatter.formatMessage("createFolder", new Triplet<>(folderName, objectTypeId, path)));
         return folder;
     }
 
@@ -125,8 +135,8 @@ public abstract class Stage {
         }
 
         if (objectExists(tmp)) {
-            String message = MessageFormatter.formatMessage("documentExists", new Pair<String, String>(documentName, path));
-            System.out.println(message);
+            String message = MessageFormatter.formatMessage("documentExists", new Pair<>(documentName, path));
+            logger.info(message);
             throw new OperationFailedException(message);
         }
 
@@ -143,7 +153,7 @@ public abstract class Stage {
 
         ContentStream contentStream = new ContentStreamImpl(documentName, null, mimeType, new FileInputStream(content));
         Document doc = root.createDocument(newDocProps, contentStream, null, null, null, null, connector.getSession().getDefaultContext());
-        System.out.println(MessageFormatter.formatMessage("createDocument", new Triplet<String, String, String>(documentName, objectTypeId, path)));
+        logger.info(MessageFormatter.formatMessage("createDocument", new Triplet<>(documentName, objectTypeId, path)));
         return doc;
     }
 
@@ -161,11 +171,13 @@ public abstract class Stage {
         for (String key : properties.keySet()) {
             if (key.contains("_")) {
                 newProps.put(key.replace('_', ':'), properties.get(key));
+            } else {
+                newProps.put(key, properties.get(key));
             }
         }
 
         object.updateProperties(newProps);
-        System.out.println(MessageFormatter.formatMessage("updateProperties", new Unit<String>(path)));
+        logger.info(MessageFormatter.formatMessage("updateProperties", new Unit<String>(path)));
     }
 /*
     private void printContent(CmisObject path, int level) {
@@ -182,34 +194,35 @@ public abstract class Stage {
         }
     }
 */
-    
+
     /**
      * Helper for Documentum CMIS. It converts the path to a 'unique' path which contains object IDs instead of plain object names.
-     * Eg/ path /dmadmin/images/picture.jpg will be converted to /dmadmin/images/0900000b80001234_picture.jpg
-     * 
-     * @param folderObject
-     * @param objectName
+     * E.g. path /dmadmin/images/picture.jpg will be converted to /dmadmin/images/0900000b80001234_picture.jpg
+     *
+     * @param path
      * @return converted path
      */
     public String convert2UniquePath(String path) {
 
-        if(!connector.getExtensionName().equalsIgnoreCase(CMISConnector.DOCUMENTUM))
+        if (!connector.getExtensionName().equalsIgnoreCase(CMISConnector.DOCUMENTUM)) {
             return path;
-        
+        }
+
         StringBuilder sb = new StringBuilder();
 
-        if(path.indexOf("/") == -1)
+        if (path.indexOf("/") == -1) {
             return sb.append(path).toString();
-        
-        Folder folder = (Folder)connector.getSession().getObjectByPath(path.substring(0, path.lastIndexOf("/")));
+        }
+
+        Folder folder = (Folder) connector.getSession().getObjectByPath(path.substring(0, path.lastIndexOf("/")));
         String objectName = path.substring(path.lastIndexOf("/") + 1);
-        
+
         sb.append(folder.getPath());
         sb.append("/");
-        
+
         ItemIterable<CmisObject> files = folder.getChildren();
-        for(CmisObject obj : files) {
-            if(obj.getBaseTypeId().equals(BaseTypeId.CMIS_DOCUMENT) && obj.getName().equals(objectName)) {
+        for (CmisObject obj : files) {
+            if (obj.getBaseTypeId().equals(BaseTypeId.CMIS_DOCUMENT) && obj.getName().equals(objectName)) {
                 sb.append(obj.getId());
                 sb.append("_");
                 sb.append(obj.getName());
@@ -218,12 +231,12 @@ public abstract class Stage {
         }
         return path;
     }
-    
-    public void deleteFile(String path, boolean allVersions) throws CmisBaseException {       
+
+    public void deleteFile(String path, boolean allVersions) throws CmisBaseException {
         CmisObject object = connector.getSession().getObjectByPath(convert2UniquePath(path));
         if (object != null) {
             object.delete(allVersions);
-            System.out.println(MessageFormatter.formatMessage("deleteFile", new Unit<String>(path)));
+            logger.info(MessageFormatter.formatMessage("deleteFile", new Unit<>(path)));
         }
     }
 
@@ -233,7 +246,7 @@ public abstract class Stage {
             for (Object aspect : aspects) {
                 AlfrescoDocument doc = (AlfrescoDocument) object;
                 doc.addAspect((String) aspect);
-                System.out.println(MessageFormatter.formatMessage("addAspect", new Unit<String>((String) aspect)));
+                logger.info(MessageFormatter.formatMessage("addAspect", new Unit<>((String) aspect)));
             }
         }
     }
@@ -244,13 +257,13 @@ public abstract class Stage {
             for (Object aspect : aspects) {
                 AlfrescoDocument doc = (AlfrescoDocument) object;
                 doc.removeAspect((String) aspect);
-                System.out.println(MessageFormatter.formatMessage("removeAspect", new Unit<String>((String) aspect)));
+                logger.info(MessageFormatter.formatMessage("removeAspect", new Unit<>((String) aspect)));
             }
         }
     }
 
     public void replaceContent(String path, String version, File newContent, String mimeType) throws FileNotFoundException, CmisBaseException {
-        Document document = (Document)connector.getSession().getObjectByPath(convert2UniquePath(path));
+        Document document = (Document) connector.getSession().getObjectByPath(convert2UniquePath(path));
 
         List<Document> allVersions = document.getAllVersions();
 
@@ -265,17 +278,17 @@ public abstract class Stage {
     }
 
     public void linkToFolder(String path, String folderPath) {
-        Document document = (Document)connector.getSession().getObjectByPath(convert2UniquePath(path));
+        Document document = (Document) connector.getSession().getObjectByPath(convert2UniquePath(path));
         Folder folder = (Folder) connector.getSession().getObjectByPath(folderPath);
         document.addToFolder(folder, true);
-        System.out.println(MessageFormatter.formatMessage("linkToFolder", new Pair<String, String>(path, folderPath)));
+        logger.info(MessageFormatter.formatMessage("linkToFolder", new Pair<>(path, folderPath)));
     }
 
     public void unlinkFromFolder(String path, String folderPath) {
-        Document document = (Document)connector.getSession().getObjectByPath(convert2UniquePath(path));
+        Document document = (Document) connector.getSession().getObjectByPath(convert2UniquePath(path));
         Folder folder = (Folder) connector.getSession().getObjectByPath(folderPath);
         document.removeFromFolder(folder);
-        System.out.println(MessageFormatter.formatMessage("unlinkFromFolder", new Pair<String, String>(path, folderPath)));
+        logger.info(MessageFormatter.formatMessage("unlinkFromFolder", new Pair<>(path, folderPath)));
     }
 
     private boolean checkType(ObjectType type, String searchedType) {
@@ -324,20 +337,21 @@ public abstract class Stage {
                 logger.error("Error:", illegalMethod);
                 failed = true;
             } catch (InvocationTargetException invocationMethod) {
+                logger.error("Error:", invocationMethod);
                 Throwable cause = invocationMethod.getCause();
-                if(cause != null && cause instanceof CmisBaseException) {
-                    errorMessage = ExceptionParser.parseException(connector, ((CmisBaseException)cause).getErrorContent());
-                    if(errorMessage == null)
+                if (cause != null && cause instanceof CmisBaseException) {
+                    errorMessage = ExceptionParser.parseException(connector, ((CmisBaseException) cause).getErrorContent());
+                    if (errorMessage == null)
                         errorMessage = cause.getLocalizedMessage();
                 } else
                     errorMessage = cause.getMessage();
                 failed = true;
             }
-           
+
             String exceptionMessage = "Failed during operation '" + c.getName() + "' with error: " + errorMessage;
             if (CMISInBatch.stopOnFail && failed)
                 throw new OperationFailedException(exceptionMessage);
-            else if(failed)
+            else if (failed)
                 logger.error(exceptionMessage);
         }
     }

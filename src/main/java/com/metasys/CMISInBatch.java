@@ -16,20 +16,15 @@
  */
 package com.metasys;
 
-import java.io.IOException;
-import java.io.InputStreamReader;
-
+import com.metasys.cmis.CMISConnector;
+import com.metasys.cmis.stages.*;
 import org.apache.log4j.Logger;
 import org.ikayzo.sdl.SDLParseException;
 import org.ikayzo.sdl.Tag;
 
-import com.metasys.cmis.CMISConnector;
-import com.metasys.cmis.stages.ExecuteStage;
-import com.metasys.cmis.stages.OperationFailedException;
-import com.metasys.cmis.stages.PrepareStage;
-import com.metasys.cmis.stages.PrevalidateStage;
-import com.metasys.cmis.stages.ValidateStage;
 import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
 
 /**
  *
@@ -41,7 +36,7 @@ public class CMISInBatch {
     public static boolean stopOnFail = false;
 
     public void init(String scriptPath) throws Exception {
-        Tag root = null;
+        Tag root;
 
         try {
             logger.info("Loading script...");

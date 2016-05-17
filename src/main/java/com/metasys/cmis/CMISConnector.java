@@ -16,10 +16,6 @@
  */
 package com.metasys.cmis;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import org.apache.chemistry.opencmis.client.api.OperationContext;
 import org.apache.chemistry.opencmis.client.api.Repository;
 import org.apache.chemistry.opencmis.client.api.Session;
@@ -28,6 +24,10 @@ import org.apache.chemistry.opencmis.client.runtime.OperationContextImpl;
 import org.apache.chemistry.opencmis.client.runtime.SessionFactoryImpl;
 import org.apache.chemistry.opencmis.commons.SessionParameter;
 import org.apache.chemistry.opencmis.commons.enums.BindingType;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  *
@@ -66,15 +66,17 @@ public class CMISConnector {
     }
 
     public void connect(String url, String userName, String password, String repositoryId) throws Exception {
-        Map<String, String> sessionParameters = null;
+        Map<String, String> sessionParameters;
         
-        if(serviceMode.equalsIgnoreCase("webservice"))
+        if(serviceMode.equalsIgnoreCase("webservice")) {
             sessionParameters = createWebServiceParameters(url, userName, password, repositoryId);
-        else
+        } else {
             sessionParameters = createAtomPubParameters(url, userName, password, repositoryId);
+        }
         
-        if(getExtensionName().equalsIgnoreCase(ALFRESCO))
+        if(getExtensionName().equalsIgnoreCase(ALFRESCO)) {
             sessionParameters.put(SessionParameter.OBJECT_FACTORY_CLASS, "org.alfresco.cmis.client.impl.AlfrescoObjectFactoryImpl");
+        }
 
         SessionFactory sessionFactory = SessionFactoryImpl.newInstance();
         if(repositoryId == null) {
@@ -93,8 +95,9 @@ public class CMISConnector {
         sessionParameters.put(SessionParameter.BINDING_TYPE, BindingType.ATOMPUB.value());
         sessionParameters.put(SessionParameter.USER, userName);
         sessionParameters.put(SessionParameter.PASSWORD, password);
-        if(repository != null)
+        if(repository != null) {
             sessionParameters.put(SessionParameter.REPOSITORY_ID, repository);
+        }
         return sessionParameters;
     }
 
@@ -113,8 +116,9 @@ public class CMISConnector {
 
         sessionParameters.put(SessionParameter.USER, userName);
         sessionParameters.put(SessionParameter.PASSWORD, password);
-        if(repository != null)
+        if(repository != null) {
             sessionParameters.put(SessionParameter.REPOSITORY_ID, repository);
+        }
         return sessionParameters;
     }
 }
