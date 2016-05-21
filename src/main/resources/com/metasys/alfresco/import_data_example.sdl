@@ -8,10 +8,11 @@ connection {
     host "http://localhost:8080/emc-cmis/resources"
     login "dmadmin"
     password "dmadmin"
-    repository-id "devbox2"
+    repository-id "devbox"
     extension-mode "documentum"
     service-mode "rest"
     stop-on-fail "false"
+    session-pool 5
 }
 
 prevalidate {
@@ -25,11 +26,11 @@ execute {
 
     generate-random-data "set1" {
         doc-type "cara_document"
-        linking-rule "/Repository/${discipline}/static/${doctype}/sub/${docsubtype}"
-        naming-rule "${file_name} - ${doctype}"
-        content-path "/media/kbryd/Media/work/roche_work/Department"
-        max-objects 5
-        randomize-order true
+        linking-rule "/Repository/${discipline}/${doctype}/${docsubtype}"
+        naming-rule "${file_name}"
+        content-path "/media/kbryd/Media/dataset"
+        overwrite-mode false
+        thread-number 4
 
         mapping {
             discipline {

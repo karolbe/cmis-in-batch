@@ -35,8 +35,10 @@ public class RandomDataGenerator {
     private final String namingRule;
     private final String contentPath;
     private final String docType;
-    private final boolean randomizeOrder;
-    private long maxObjects;
+    private boolean randomizeOrder = false;
+    private long maxObjects = -1;
+    private boolean overwriteMode = false;
+    private int threadNumber = 1;
     private Tag tag;
     private Map<String, List<String>> dictionaries = new HashMap<>();
     private Collection<File> files;
@@ -47,14 +49,17 @@ public class RandomDataGenerator {
         this.tag = tag;
         if (tag.hasChild("max-objects")) {
             this.maxObjects = tag.getChild("max-objects").intValue();
-        } else {
-            this.maxObjects = -1;
         }
         if (tag.hasChild("randomize-order")) {
             this.randomizeOrder = tag.getChild("randomize-order").booleanValue();
-        } else {
-            this.randomizeOrder = false;
         }
+        if (tag.hasChild("overwrite-mode")) {
+            this.overwriteMode = tag.getChild("overwrite-mode").booleanValue();
+        }
+        if (tag.hasChild("thread-number")) {
+            threadNumber = tag.getChild("thread-number").intValue();
+        }
+
         this.docType = tag.getChild("doc-type").stringValue();
         this.linkingRule = tag.getChild("linking-rule").stringValue();
         this.namingRule = tag.getChild("naming-rule").stringValue();
@@ -111,19 +116,28 @@ public class RandomDataGenerator {
                 currentIndex++;
 
                 executeStage.createFolders(targetPath);
-                Document object = executeStage.createDocument(file, Files.probeContentType(file.toPath()), targetPath, targetName, docType);
+                boolean exists = executeStage.objectExists(targetPath + "/" + targetName);
 
-                if (!mapping.keySet().isEmpty()) {
-                    Map<String, Object> newProps = new HashMap<>();
-
-                    for (String key : mapping.keySet()) {
-                        newProps.put(key, processVariableString(result, mapping.get(key), itemContext));
+                if(overwriteMode || !exists) {
+                    if(exists) {
+                        executeStage.deleteFile(targetPath + "/" + targetName, true);
                     }
+                    Document object = executeStage.createDocument(file, Files.probeContentType(file.toPath()), targetPath, targetName, docType);
 
-                    object.updateProperties(newProps);
+                    if (!mapping.keySet().isEmpty()) {
+                        Map<String, Object> newProps = new HashMap<>();
+
+                        for (String key : mapping.keySet()) {
+                            newProps.put(key, processVariableString(result, mapping.get(key), itemContext));
+                        }
+
+                        object.updateProperties(newProps);
+                    }
+                    logger.info("Imported document to: '" + targetPath + "/" + targetName + "' with mime/type: '" + Files.probeContentType(file.toPath()) + "'");
+                } else {
+                    logger.info("Document exists at location: '" + targetPath + "/" + targetName + "'. Skipped.'");
                 }
 
-                logger.info("Imported document to: '" + targetPath + "/" + targetName + "' with mime/type: '" + Files.probeContentType(file.toPath()) + "'");
                 if (currentIndex == maxObjects) {
                     processing = false;
                     break;

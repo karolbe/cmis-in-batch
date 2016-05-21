@@ -22,6 +22,7 @@ import com.metasys.utils.ExceptionParser;
 import com.metasys.utils.MessageFormatter;
 import org.alfresco.cmis.client.AlfrescoDocument;
 import org.apache.chemistry.opencmis.client.api.*;
+import org.apache.chemistry.opencmis.client.runtime.OperationContextImpl;
 import org.apache.chemistry.opencmis.commons.PropertyIds;
 import org.apache.chemistry.opencmis.commons.data.ContentStream;
 import org.apache.chemistry.opencmis.commons.enums.BaseTypeId;
@@ -67,19 +68,32 @@ public abstract class Stage {
     }
 
     public Folder createFolders(String path) throws CmisBaseException {
-        String _path[] = path.split("/");
-        String curpath = "/";
-        Folder last = null;
-        for (int n = 1; n < _path.length; n++) {
+        try {
+            Folder folder = (Folder) connector.getSession().getObjectByPath(path);
+            return folder;
+        } catch (Exception e) {
+            // ignore
+        }
+
+        String pathElements[] = path.split("/");
+        String currentPath = "/";
+        Folder lastFolder = null;
+
+        for(int n = 1; n < pathElements.length; n++) {
+            String folderPath = !currentPath.equals("/") ? currentPath.substring(0, currentPath.length() - 1) : currentPath;
+            if(!folderPath.endsWith("/")) {
+                folderPath += "/";
+            }
             try {
-                last = createFolder(!curpath.equals("/") ? curpath.substring(0, curpath.length() - 1) : curpath, _path[n], "cmis:folder");
+                lastFolder = (Folder) connector.getSession().getObjectByPath(folderPath + pathElements[n]);
             } catch (CmisBaseException o) {
-                //pass
+                lastFolder = createFolder(folderPath, pathElements[n], "cmis:folder");
             }
 
-            curpath += _path[n] + "/";
+            currentPath += pathElements[n] + "/";
         }
-        return last;
+
+        return lastFolder;
     }
 
     public Folder createFolder(String path, String folderName) throws CmisBaseException {
@@ -96,6 +110,10 @@ public abstract class Stage {
             tmp += folderName;
         } else {
             tmp += "/" + folderName;
+        }
+
+        if(path.endsWith("/")) {
+            path = path.substring(0, path.length() - 1);
         }
 
         if (objectExists(tmp)) {
@@ -220,7 +238,15 @@ public abstract class Stage {
         sb.append(folder.getPath());
         sb.append("/");
 
-        ItemIterable<CmisObject> files = folder.getChildren();
+        OperationContext operationContext = new OperationContextImpl();
+        operationContext.setIncludeAcls(false);
+        operationContext.setIncludePolicies(false);
+        operationContext.setIncludeAllowableActions(false);
+        operationContext.setFilterString("cmis:name,cmis:objectId");
+        operationContext.setLoadSecondaryTypeProperties(false);
+        operationContext.setCacheEnabled(true);
+
+        ItemIterable<CmisObject> files = folder.getChildren(operationContext);
         for (CmisObject obj : files) {
             if (obj.getBaseTypeId().equals(BaseTypeId.CMIS_DOCUMENT) && obj.getName().equals(objectName)) {
                 sb.append(obj.getId());
